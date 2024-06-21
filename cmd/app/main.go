@@ -9,24 +9,24 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/panprogramadorgh/jsonwebtokenserver/internal/dbutils"
 	h "github.com/panprogramadorgh/jsonwebtokenserver/internal/handlers"
-	mid "github.com/panprogramadorgh/jsonwebtokenserver/internal/middlewares"
+	m "github.com/panprogramadorgh/jsonwebtokenserver/internal/middlewares"
 )
 
 func main() {
 
-	db, err := dbutils.Connect()
+	db, err := dbutils.ConnectDB()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	http.HandleFunc("/users", mid.CheckDBMid(db, h.HandleDBHandler(db, h.UsersHandler)))
+	http.HandleFunc("/users", m.CheckDBMid(db, h.UseDBHandler(db, h.UsersHandler)))
 
-	http.HandleFunc("/login", mid.CheckDBMid(db, h.HandleDBHandler(db, h.PostLoginHandler)))
+	http.HandleFunc("/login", m.CheckDBMid(db, h.UseDBHandler(db, h.LoginHandler)))
 
-	http.HandleFunc("/profile", mid.CheckDBMid(db, h.HandleDBHandler(db, h.GetProfileHandler)))
+	http.HandleFunc("/profile", m.CheckDBMid(db, h.UseDBHandler(db, h.ProfileHandler)))
 
-	http.HandleFunc("/register", mid.CheckDBMid(db, h.HandleDBHandler(db, h.RegisterHandler)))
+	http.HandleFunc("/register", m.CheckDBMid(db, h.UseDBHandler(db, h.RegisterHandler)))
 
 	var p string = "3000"
 	if len(os.Args) == 2 {

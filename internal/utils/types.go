@@ -5,11 +5,15 @@ type Credentials struct {
 	Password string
 }
 
-type User struct {
-	UserID int
+type UserPayload struct {
 	Credentials
 	Firstname string
 	Lastname  string
+}
+
+type User struct {
+	UserID int
+	UserPayload
 }
 
 type Users []User

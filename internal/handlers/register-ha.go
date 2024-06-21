@@ -1,11 +1,7 @@
 package handlers
 
 import (
-	"bufio"
 	"database/sql"
-	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/panprogramadorgh/jsonwebtokenserver/internal/dbutils"
@@ -14,67 +10,90 @@ import (
 
 func RegisterHandler(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		// Leer el cuerpo de la req
-		reader := bufio.NewReader(r.Body)
-		body := ""
-		for {
-			line, err := reader.ReadString('\n')
-			body += line
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				fmt.Println(err)
-			}
-		}
-		var user utils.User
-		if err := json.Unmarshal([]byte(body), &user); err != nil {
+
+		// Convertir el cuerpo de la solicitud en un struct utils.User
+		var userPay utils.UserPayload
+		if err := utils.ReadReqBody(r, &userPay); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			if _, err := w.Write([]byte("internal server error")); err != nil {
-				fmt.Println(err)
-				return
-			}
-			fmt.Println(err)
+			utils.WriteJRes(w, map[string]interface{}{
+				"error": "internal server error",
+			})
 			return
 		}
-		if err := dbutils.PostUser(db, user); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			if _, err := w.Write([]byte("internal server error")); err != nil {
-				fmt.Println(err)
-				return
-			}
-			fmt.Println(err)
+
+		// Comprobacion de formato de los campos del cuerpo de la solicitud
+		if len(userPay.Username) < 3 {
+			w.WriteHeader(http.StatusBadRequest)
+			utils.WriteJRes(w, map[string]interface{}{
+				"error": "bad request",
+			})
 			return
 		}
-		resMap := map[string]interface{}{
+		if len(userPay.Password) < 5 {
+			w.WriteHeader(http.StatusBadRequest)
+			utils.WriteJRes(w, map[string]interface{}{
+				"error": "bad request",
+			})
+			return
+		}
+		if len(userPay.Firstname) < 3 {
+			w.WriteHeader(http.StatusBadRequest)
+			utils.WriteJRes(w, map[string]interface{}{
+				"error": "bad request",
+			})
+			return
+		}
+		if len(userPay.Lastname) < 3 {
+			w.WriteHeader(http.StatusBadRequest)
+			utils.WriteJRes(w, map[string]interface{}{
+				"error": "bad request",
+			})
+			return
+		}
+
+		// Comprobar la existencia del username
+		users, err := dbutils.GetUsers(db)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			utils.WriteJRes(w, map[string]interface{}{
+				"error": "internal server error",
+			})
+			return
+		}
+
+		if users.IndexOf(userPay.Username) != -1 {
+			w.WriteHeader(http.StatusBadRequest)
+			utils.WriteJRes(w, map[string]interface{}{
+				"error": "username already taken",
+			})
+			return
+		}
+
+		// Subir usuario a la base de datos
+		if err := dbutils.PostUser(db, userPay); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			utils.WriteJRes(w, map[string]interface{}{
+				"error": "internal server error",
+			})
+			return
+		}
+
+		newUserIndex := users.IndexOf(userPay.Username)
+		if newUserIndex == -1 {
+			w.WriteHeader(http.StatusInternalServerError)
+			utils.WriteJRes(w, map[string]interface{}{
+				"error": "internal server error",
+			})
+			return
+		}
+		newUser := users[newUserIndex]
+
+		utils.WriteJRes(w, map[string]interface{}{
 			"message": "user created successfully",
-		}
-		resJson, err := json.Marshal(resMap)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			if _, err := w.Write([]byte("internal server error")); err != nil {
-				fmt.Println(err)
-				return
-			}
-			fmt.Println(err)
-			return
-		}
-		if _, err := w.Write(resJson); err != nil {
-			fmt.Println(err)
-			return
-		}
+			"user":    newUser,
+		})
+
 	} else {
-		w.WriteHeader(http.StatusNotFound)
-		mapRes := map[string]interface{}{
-			"error": "not found",
-		}
-		jsonRes, err := json.Marshal(mapRes)
-		if err != nil {
-			if _, err := w.Write(jsonRes); err != nil {
-				fmt.Println(err)
-				return
-			}
-			fmt.Println(err)
-		}
+		http.NotFound(w, r)
 	}
 }

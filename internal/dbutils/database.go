@@ -6,10 +6,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func Connect() (*sql.DB, error) {
+func ConnectDB() (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", "./database.db")
 	if err != nil {
 		return nil, err
 	}
 	return db, nil
+}
+
+func CheckDB(db *sql.DB) error {
+	return db.Ping()
 }

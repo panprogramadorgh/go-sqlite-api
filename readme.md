@@ -5,3 +5,4 @@
 - Funcion para facilitar el envio de respuestas en json
 - Hashear las contraseñas de los usuarios cuando se registren
 - Comprobacion del hash en el login
+- Crear mapa con todos los mensajes para cada codigo de estado
