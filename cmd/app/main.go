@@ -7,26 +7,28 @@ import (
 	"os"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/panprogramadorgh/jsonwebtokenserver/internal/dbutils"
 	h "github.com/panprogramadorgh/jsonwebtokenserver/internal/handlers"
 	m "github.com/panprogramadorgh/jsonwebtokenserver/internal/middlewares"
+	"github.com/panprogramadorgh/jsonwebtokenserver/internal/utils"
 )
 
 func main() {
 
-	db, err := dbutils.ConnectDB()
+	db, err := utils.ConnectDB("./database.db")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	http.HandleFunc("/users", m.CheckDBMid(db, h.UseDBHandler(db, h.UsersHandler)))
+	http.HandleFunc("GET /users", m.CheckDBMid(db, h.ImplementDBHandler(h.GetUsersHandler{DB: db})))
 
-	http.HandleFunc("/login", m.CheckDBMid(db, h.UseDBHandler(db, h.LoginHandler)))
+	http.HandleFunc("DELETE /users", m.CheckDBMid(db, h.ImplementDBHandler(h.DeleteUsersHandler{DB: db})))
 
-	http.HandleFunc("/profile", m.CheckDBMid(db, h.UseDBHandler(db, h.ProfileHandler)))
+	http.HandleFunc("POST /login", m.CheckDBMid(db, h.ImplementDBHandler(h.LoginHandler{DB: db})))
 
-	http.HandleFunc("/register", m.CheckDBMid(db, h.UseDBHandler(db, h.RegisterHandler)))
+	http.HandleFunc("GET /profile", m.CheckDBMid(db, h.ImplementDBHandler(h.PofileHandler{DB: db})))
+
+	http.HandleFunc("POST /register", m.CheckDBMid(db, h.ImplementDBHandler(h.RegisterHandler{DB: db})))
 
 	var p string = "3000"
 	if len(os.Args) == 2 {
