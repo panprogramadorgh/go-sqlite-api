@@ -6,29 +6,33 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (u Users) IndexOf(username string) int {
-	userI := -1
-	for i, eachUser := range u {
-		if eachUser.Credentials.Username == username {
-			userI = i
-			break
-		}
-	}
-	return userI
+type Credentials struct {
+	Username string
+	Password string
 }
 
-func (u Users) Auth(username string, password string) bool {
-	userI := u.IndexOf(username)
-	if userI == -1 {
+type UserPayload struct {
+	Credentials
+	Firstname string
+	Lastname  string
+}
+
+type User struct {
+	UserID int
+	UserPayload
+}
+
+type Users []User
+
+func Auth(db *sql.DB, username string, password string) bool {
+	user, err := GetUser(db, username)
+	if err != nil || user == nil {
 		return false
 	}
-	user := u[userI]
-	usernameMatch := user.Credentials.Username == username
-	if !usernameMatch {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return false
 	}
-	passwordMatch := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	return passwordMatch == nil
+	return true
 }
 
 // Hashea la contraseña del payload del usuario
@@ -42,14 +46,14 @@ func (p *UserPayload) HashPass() error {
 }
 
 // Se actualiza el slice de usuarios (tipo subyacente)
-func (u *Users) ReloadData(db *sql.DB) error {
-	users, err := GetUsers(db)
-	if err != nil {
-		return nil
-	}
-	*u = users
-	return nil
-}
+// func (u *Users) ReloadData(db *sql.DB) error {
+// 	users, err := GetUsers(db)
+// 	if err != nil {
+// 		return nil
+// 	}
+// 	*u = users
+// 	return nil
+// }
 
 func GetUsers(db *sql.DB) (Users, error) {
 	query :=
@@ -65,14 +69,17 @@ func GetUsers(db *sql.DB) (Users, error) {
 	var users Users
 
 	for rows.Next() {
-		var userId int
+		var userID int
 		var username string
 		var password string
 		var firstname string
 		var lastname string
-		rows.Scan(&userId, &username, &password, &firstname, &lastname)
+		err := rows.Scan(&userID, &username, &password, &firstname, &lastname)
+		if err != nil {
+			return nil, err
+		}
 		p := User{
-			UserID: userId,
+			UserID: userID,
 			UserPayload: UserPayload{
 				Credentials: Credentials{
 					Username: username,
@@ -86,6 +93,43 @@ func GetUsers(db *sql.DB) (Users, error) {
 	}
 
 	return users, nil
+}
+
+func GetUser(db *sql.DB, username string) (*User, error) {
+	query :=
+		`
+	SELECT * FROM users WHERE username = ?
+	`
+	rows, err := db.Query(query, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var user *User = nil
+	for rows.Next() {
+		var userID int
+		var username string
+		var password string
+		var firstname string
+		var lastname string
+		err := rows.Scan(&userID, &username, &password, &firstname, &lastname)
+		if err != nil {
+			return nil, err
+		}
+		user = &User{
+			UserID: userID,
+			UserPayload: UserPayload{
+				Credentials: Credentials{
+					Username: username,
+					Password: password,
+				},
+				Firstname: firstname,
+				Lastname:  lastname,
+			},
+		}
+	}
+	return user, nil
 }
 
 func PostUser(db *sql.DB, p UserPayload) error {
@@ -107,4 +151,14 @@ func DeleteUsers(db *sql.DB) error {
 	`
 	_, err := db.Exec(query, nil)
 	return err
+}
+
+func DeleteUser(db *sql.DB, username string) error {
+	// Eliminar filas con el username del payload
+	if _, err := db.Exec(`
+	DELETE FROM users WHERE username = ?
+	`, username); err != nil {
+		return err
+	}
+	return nil
 }

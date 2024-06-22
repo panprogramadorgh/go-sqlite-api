@@ -12,7 +12,6 @@ def sql(conn: sqlite3.Connection, query_str: str,  *args) -> list[any]:
 init_transaction = '''
 BEGIN
 '''
-
 drop_table = '''
 DROP TABLE IF EXISTS users
 '''
@@ -28,11 +27,9 @@ CREATE TABLE users (
 insert_user = '''
 INSERT INTO users (username, password, firstname, lastname) VALUES (?, ?, ?, ?)
 '''
-
 see_users = '''
 SELECT * FROM users WHERE TRUE
 '''
-
 commit_transaction = '''
 COMMIT
 '''

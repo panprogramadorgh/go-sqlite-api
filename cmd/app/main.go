@@ -26,7 +26,9 @@ func main() {
 
 	http.HandleFunc("POST /login", m.CheckDBMid(db, h.ImplementDBHandler(h.LoginHandler{DB: db})))
 
-	http.HandleFunc("GET /profile", m.CheckDBMid(db, h.ImplementDBHandler(h.PofileHandler{DB: db})))
+	http.HandleFunc("GET /profile", m.CheckDBMid(db, h.ImplementDBHandler(h.GetPofileHandler{DB: db})))
+
+	http.HandleFunc("DELETE /profile", m.CheckDBMid(db, h.ImplementDBHandler(h.DeleteUserHandler{DB: db})))
 
 	http.HandleFunc("POST /register", m.CheckDBMid(db, h.ImplementDBHandler(h.RegisterHandler{DB: db})))
 
